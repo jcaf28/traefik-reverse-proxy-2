@@ -1,0 +1,6 @@
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/etc/nginx/ssl/server.crt"
+        keyFile: "/etc/nginx/ssl/server.key"

@@ -1,0 +1,77 @@
+networks:
+  proxy_net:
+    name: proxy_net
+    driver: bridge
+    # Si ya existe external, cambiar a "external: true"
+    # o ajustar según corresponda. Si deseas que Docker la cree
+    # automáticamente, deja la config tal cual.
+
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: always
+    command:
+      # Nivel de logs
+      - "--log.level=INFO"
+
+      # Habilita el panel de control de Traefik (opcional)
+      - "--api.dashboard=true"
+
+      # Entrypoint en puerto 80 (HTTP)
+      - "--entryPoints.web.address=:80"
+
+      # Entrypoint en puerto 443 (HTTPS)
+      - "--entryPoints.websecure.address=:443"
+
+      # Redirección automática de HTTP a HTTPS
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+
+      # Habilita la detección de contenedores vía Docker
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+
+      # Añadimos un proveedor de archivos para cargar la configuración TLS
+      - "--providers.file.directory=/traefik_config"
+      - "--providers.file.watch=true"
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      # Montamos el socket de Docker en modo lectura
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # Montamos la carpeta local con la configuración extra de Traefik
+      - ./traefik_config:/traefik_config:ro
+
+      # Montamos la carpeta donde están los certificados
+      - /etc/nginx/ssl:/etc/nginx/ssl:ro
+
+    networks:
+      - proxy_net
+
+  test_service:
+    image: nginx:alpine
+    container_name: test_service
+    # Simplemente usamos Nginx con un HTML estático
+    volumes:
+      # Montamos la carpeta local "html" dentro de /usr/share/nginx/html
+      - ./html:/usr/share/nginx/html:ro
+
+    labels:
+      # Decimos a Traefik que este contenedor sí debe ser "expuesto"
+      - "traefik.enable=true"
+
+      # Definimos el router que va a manejar HTTPS
+      - "traefik.http.routers.test_service.entryPoints=websecure"
+      - "traefik.http.routers.test_service.rule=PathPrefix(`/health-test-check`)"
+      - "traefik.http.routers.test_service.tls=true"
+
+      # Importante: el puerto interno al que se conecta Traefik
+      - "traefik.http.services.test_service.loadbalancer.server.port=80"
+
+    networks:
+      - proxy_net
