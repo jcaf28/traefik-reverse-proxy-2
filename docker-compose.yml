@@ -1,13 +1,4 @@
 # PATH: /docker-compose.yml
-
-networks:
-  proxy_net:
-    name: proxy_net
-    driver: bridge
-    # Si ya existe external, cambiar a "external: true"
-    # o ajustar según corresponda. Si deseas que Docker la cree
-    # automáticamente, deja la config tal cual.
-
 services:
   traefik:
     image: traefik:latest
@@ -15,10 +6,13 @@ services:
     restart: always
     command:
       # Nivel de logs
-      - "--log.level=INFO"
+      - "--log.level=DEBUG"
 
       # Habilita el panel de control de Traefik (opcional)
       - "--api.dashboard=true"
+
+      # Activa el panel de control en http://localhost:8080
+      - "--api.insecure=true"
 
       # Entrypoint en puerto 80 (HTTP)
       - "--entryPoints.web.address=:80"
@@ -77,3 +71,12 @@ services:
 
     networks:
       - proxy_net
+
+networks:
+  proxy_net:
+    name: proxy_net
+    driver: bridge
+    # Si ya existe external, cambiar a "external: true"
+    # o ajustar según corresponda. Si deseas que Docker la cree
+    # automáticamente, deja la config tal cual.
+      
